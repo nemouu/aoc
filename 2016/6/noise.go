@@ -27,7 +27,7 @@ func main() {
 		lines = append(lines, scanner.Text())
 	}
 
-	// Now you can iterate over lines multiple times - first for part 1
+	// Now you can iterate over lines multiple times - first for part 1 and 2
 	for i := 0; i < len(lines[0]); i++ {
 
 		// We use a map to save the letter count
