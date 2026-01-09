@@ -17,12 +17,42 @@ func containsABBA(inStr string) bool {
 	return false
 }
 
+func parseIP(line string) (outside, inside []string) {
+	currentPos := 0
+
+	for {
+		start := strings.Index(line[currentPos:], "[")
+		if start == -1 {
+			if currentPos < len(line) {
+				outside = append(outside, line[currentPos:])
+			}
+			break
+		}
+
+		start += currentPos
+		if start > currentPos {
+			outside = append(outside, line[currentPos:start])
+		}
+
+		end := strings.Index(line[start:], "]")
+		if end == -1 {
+			break
+		}
+		end += start
+
+		inside = append(inside, line[start+1:end])
+		currentPos = end + 1
+	}
+	return
+}
+
 func main() {
 	// declare variables
-	var result int
+	var resultTLS int
+	var resultSSL int
 
 	// read and parse the input
-	file, err := os.Open("inputtest2.txt")
+	file, err := os.Open("input7.txt")
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		os.Exit(1)
@@ -34,64 +64,37 @@ func main() {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		var outside []string // parts outside brackets
-		var inside []string  // parts inside brackets
+		// Parse the IP address into its components
+		outside, inside := parseIP(line)
 
-		currentPos := 0
+		// part 1: Check for TLS support - check if it has at least one ABBA outside brackets
+		// 			and no ABBAs inside brackets
+		if slices.ContainsFunc(outside, containsABBA) && !slices.ContainsFunc(inside, containsABBA) {
+			resultTLS++
+		}
 
-		for {
-			start := strings.Index(line[currentPos:], "[")
-			if start == -1 {
-				// no more brackets, add the rest
-				if currentPos < len(line) {
-					outside = append(outside, line[currentPos:])
-				}
+		// part 2: Check for SSL support - check if it has at least one ABA outside brackets
+		// 			and at least one corresponding BAB inside brackets
+		foundSSL := false
+		for _, outWord := range outside {
+			if foundSSL {
 				break
 			}
-
-			// adjust start to absolute position
-			start += currentPos
-
-			// add the part before the bracket
-			if start > currentPos {
-				outside = append(outside, line[currentPos:start])
-			}
-
-			// find the closing bracket
-			end := strings.Index(line[start:], "]")
-			if end == -1 {
-				break // malformed string
-			}
-			end += start
-
-			// add the part inside brackets
-			inside = append(inside, line[start+1:end])
-
-			// move past this bracket pair
-			currentPos = end + 1
-		}
-
-		// check if the parts outside of the brackets contain at least one ABBA and the inside of the brackets contains none
-		if slices.ContainsFunc(outside, containsABBA) && !slices.ContainsFunc(inside, containsABBA) {
-			result++
-		}
-
-		// part 2
-		// loop over outside strings and search for ABAs
-		// everytime one is found create a string BAB (string builder)
-		// loop over all strings in the inside and see if the current BAB is in there somewhere
-		// if it is increase the result and stop
-		for _, outWord := range outside {
 			for i := 0; i < len(outWord)-2; i++ {
-				if (outWord[i] == outWord[i+2]) && (outWord[i+1] != outWord[i]) {
-					var currBAB strings.Builder
-					currBAB.WriteByte(outWord[i+1])
-					currBAB.WriteByte(outWord[i])
-					currBAB.WriteByte(outWord[i+1])
+				if outWord[i] == outWord[i+2] && outWord[i+1] != outWord[i] {
+					// Build the corresponding BAB
+					bab := string([]byte{outWord[i+1], outWord[i], outWord[i+1]})
+
+					// Check if any inside section contains this BAB
 					for _, inWord := range inside {
-						if strings.Contains(inWord, currBAB.String()) {
-							fmt.Printf("juhuuuuu, das wort ist: %s und es ist in %s\n", currBAB.String(), inWord)
+						if strings.Contains(inWord, bab) {
+							resultSSL++
+							foundSSL = true
+							break
 						}
+					}
+					if foundSSL {
+						break
 					}
 				}
 			}
@@ -99,7 +102,8 @@ func main() {
 	}
 
 	// print results
-	fmt.Printf("There are %d IP addresses that support TLS.\n", result)
+	fmt.Printf("There are %d IP addresses that support TLS.\n", resultTLS)
+	fmt.Printf("And there are %d IP addresses that support SSL.\n", resultSSL)
 
 	// check for errors during scanning
 	if err := scanner.Err(); err != nil {
