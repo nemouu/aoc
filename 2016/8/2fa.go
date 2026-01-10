@@ -16,12 +16,13 @@ func rotateRight(inSlice []bool, inAmount int) []bool {
 
 func main() {
 	// declare variables
-	var screen [3][7]bool
+	var screen [6][50]bool
 	var inOne int
 	var inTwo int
+	var result int
 
 	// read and parse the input
-	file, err := os.Open("inputtest.txt")
+	file, err := os.Open("input8.txt")
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		os.Exit(1)
@@ -32,13 +33,12 @@ func main() {
 
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		// deal with first command
 		if strings.HasPrefix(line, "rect") {
 
 			// read in values
 			fmt.Sscanf(line, "rect %dx%d", &inOne, &inTwo)
-
-			// test printing
-			fmt.Printf("Line '%s' has: rect %d xxx %d\n", line, inOne, inTwo)
 
 			// looping over the space given by the values
 			for i := 0; i < inTwo; i++ {
@@ -47,6 +47,7 @@ func main() {
 				}
 			}
 
+			// deal with the column rotation
 		} else if strings.HasPrefix(line, "rotate") {
 			instructions := strings.Split(line, " ")
 			if strings.HasPrefix(instructions[1], "column") {
@@ -54,8 +55,25 @@ func main() {
 				// read in values
 				fmt.Sscanf(line, "rotate column x=%d by %d", &inOne, &inTwo)
 
-				// test printing
-				fmt.Printf("Line '%s' has: rotate column %d byby %d\n", line, inOne, inTwo)
+				// turn column into a slice
+				newCol := make([]bool, len(screen))
+				for i := range len(screen) {
+					newCol[i] = screen[i][inOne]
+				}
+
+				// get a rotated version of that slice
+				newCol = rotateRight(newCol, inTwo)
+
+				// write it back into the screen
+				for i := range len(screen) {
+					screen[i][inOne] = newCol[i]
+				}
+
+				// deal with the row rotation
+			} else if strings.HasPrefix(instructions[1], "row") {
+
+				// read in values
+				fmt.Sscanf(line, "rotate row y=%d by %d", &inOne, &inTwo)
 
 				// get a new row that is rotated by the right amount
 				newRow := rotateRight(screen[inOne][:], inTwo)
@@ -63,29 +81,24 @@ func main() {
 				// write it back to the screen
 				copy(screen[inOne][:], newRow)
 
-			} else if strings.HasPrefix(instructions[1], "row") {
-
-				// read in values
-				fmt.Sscanf(line, "rotate row y=%d by %d", &inOne, &inTwo)
-
-				// test printing
-				fmt.Printf("Line '%s' has: rotate row %d byby %d\n", line, inOne, inTwo)
 			}
 		}
 	}
 
-	// print screen
-	fmt.Println()
+	// print screen and count result
+	fmt.Printf("\nAfter swiping the keycard the screen looks like this:\n\n")
 	for i := range len(screen) {
 		for j := range len(screen[0]) {
 			if screen[i][j] {
 				fmt.Print("#")
+				result++
 			} else {
 				fmt.Print(".")
 			}
 		}
 		fmt.Println()
 	}
+	fmt.Printf("\nand %d pixels are lit.\n\n", result)
 
 	// check for errors during scanning
 	if err := scanner.Err(); err != nil {
